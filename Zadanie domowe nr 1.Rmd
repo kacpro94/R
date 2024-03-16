@@ -1,0 +1,607 @@
+---
+title: "Zadanie domowe nr 1"
+author: "Kacper Prorok"
+date: "2023-10-11"
+output: html_document
+---
+ 
+# **Zadanie 1**
+
+## Tworzenie zmiennych o nazwach <span style="color:red">*pierwsza*</span> i <span style="color:red">*druga*</span>
+
+```{r}
+pierwsza<-c(1:8)
+druga<-c(13,5,2,7,9,121,65,4)
+```
+
+## Wyznaczanie sumy, różnicy oraz tworzenie zmiennej <span style="color:red">*więcej*</span>
+
+```{r}
+(suma<-pierwsza+druga)
+(różnica<-pierwsza-druga)
+(więcej<-pierwsza+1)
+```
+
+## Obliczanie średniej arytmetycznej oraz odchylenia standardowego
+
+```{r}
+mean(x = pierwsza)
+sd(x = druga)
+```
+
+# **Zadanie 2**
+
+## Tworzenie ramki o nazwie <span style="color:red">*osoby*</span>
+
+```{r}
+wzrost<-c(160,170,145,188,190,187,156)
+waga<-c(70,66,50,90,88,67,86)
+osoba<-data.frame(wzrost,waga)
+```
+
+## Użycie funkcji do inspekcji danych
+
+```{r}
+str(osoba)
+```
+
+```{r}
+head(osoba)
+```
+
+```{r}
+tail(osoba)
+```
+
+```{r}
+dim(osoba)
+```
+
+```{r}
+summary(osoba)
+```
+
+# **Zadanie 3**
+
+## Nadanie imion obiektom w ramce osoby
+
+```{r}
+row.names(osoba)<-c("Jan","Adam","Gosia","Patryk","Andrzej","John","Ala")
+head(osoba)
+```
+
+## Tworzenie obiektu BMI
+
+```{r message=FALSE}
+(BMI<-waga/(wzrost/100)^2)
+```
+
+## Wyświetlanie osób z BMI\>30
+
+```{r}
+osoba[BMI>30,]
+```
+
+## Suma osób z BMI\<25
+
+```{r}
+sum(BMI<=25)
+```
+
+Czyli mamy 4 osoby z BMI\<25
+
+# **Zadanie 4**
+
+
+
+```{include=FALSE}
+datasets::mtcars
+datasets::Orange
+```
+
+### Zbiór danych <span style="color:red">*mtcars*</span>
+
+```{r}
+str(mtcars)
+```
+
+Dane przedstawiają dane techniczne 32 samochodów z lat 1973-74. Możemy m.in. dowiedzieć się jakie spalanie mają poszczególne modele, ile mają cylindrów i jakie mają przyspieszenie na 1/4 mili.
+
+### Zbiór <span style="color:red">*Orange*</span>
+
+```{r}
+str(Orange)
+```
+
+Dane zawierają 35 obserwacji i 3 kolumny. Opisują wiek i obwód drzew pomarańczowych w czasie.
+
+### Wyświetlanie samochodów z 6 cylindrami
+
+```{r}
+mtcars[mtcars$cyl==6,]
+```
+
+### Przeciętna liczba koni aut o spalaniu mniejszym niż 20
+
+```{r}
+mean(mtcars[mtcars$mpg<20,4])
+```
+
+### Rysowanie histogramu dla zmiennej <span style="color:red">*circumference* </span>z zestawu <span style="color:red">*Orange*</span>
+
+```{r}
+hist(Orange$circumference)
+```
+
+### Rysowanie wykresu pudełkowego dla zmiennych <span style="color:red">*mpg*</span>,<span style="color:red">*hp*</span> oraz <span style="color:red">*qsec*</span> z zestawu <span style="color:red">*mtcars*</span>
+
+```{r}
+
+data<-data.frame(mpg=mtcars$mpg,hp=mtcars$hp,qsec=mtcars$qsec)
+boxplot(data)
+```
+
+# **Zadanie 5**
+
+### Wczytywanie biblioteki <span style="color:red">*psych*</span>
+
+```{r}
+library(psych)
+```
+
+### Użycie funkcji <span style="color:red">*describe*</span> na pakiecie danych <span style="color:red">*mtcars*</span>
+
+```{r}
+describe(mtcars)
+```
+
+Funkcja <span style="color:red">*describe()*</span> daje nam więcej statystyk opisowych niż funkcja <span style="color:red">*summary()*</span>
+
+### Użycie funkcji <span style="color:red">*describeBy()*</span>
+
+```{r}
+describeBy(mtcars$cyl,mtcars$gear)
+```
+
+W naszym przypadku funkcja <span style="color:red">*describeBy()*</span> pozwoliła nam na uzyskanie statystyk opisowych zmiennej <span style="color:red">r*cyl*</span>, gdy jest ona pogrupowana przez zmienną <span style="color:red">*gear*</span>.
+
+# Zadanie 6
+
+### Generowanie 20 rzutów kostki do gry oraz obliczanie średniej i odchylenia standardowego
+
+```{r}
+proba<-sample(1:6,20,replace=T)
+mean(proba)
+sd(proba)
+```
+
+### Generowanie 100 rzutów monetą
+
+```{r}
+rzut<-sample(1:2,100,replace=T)
+cat("Tyle wypadło orłów: ",sum(rzut==1))
+```
+
+### Losowanie 10 liczb naturalnych z przedziału 0-100(bez zwracania)
+
+```{r}
+sample(0:100,10,replace = F)
+```
+
+### Przykład użycia funkcji <span style="color:red">*rpois()*</span>
+
+```{r}
+plot(rpois(n = 100,2))
+```
+
+# Zadanie 7
+
+```{r include=FALSE}
+lista <- list(palenie <- c(F,T,T,F,F,T,F),
+              cyfry <- 0:9,
+              macierz <- matrix(sample(1:5,16,replace = T),4,4),
+              tekst <- c("Litwo", "ojczyzno", "moja", "ty",
+                         "jestes", "jak", "zdrowie"))
+```
+
+### Odwoływanie się do obiektu <span style="color:red">*tekst*</span>
+
+```{r}
+lista[4]
+```
+
+### Odwoływanie się do trzeciego elementu wektora <span style="color:red">*cyfry*</span>
+
+```{r}
+# 1 sposób
+cyfry<-c(lista[[2]])
+cyfry[3]
+## 2 sposób
+lista[[2]][3]
+```
+
+### Odwoływanie się do 3 kolumny obiektu <span style="color:red">*macierz*</span>
+
+```{r}
+print(lista[[3]][,3])
+```
+
+# Zadanie 8
+
+### Tworzenie ramki <span style="color:red">*pacjenci*</span>
+
+```{r}
+wiek <- c(50, 17, 39, 27, 90)
+waga <- c(80, 75, 92, 105, 60)
+pacjenci<-data.frame(wiek,waga)
+pacjenci
+```
+
+### Wykluczenie z ramki pacjentów o wadze \>90 lub osób \<18 lat
+
+```{r}
+pacjenci<-pacjenci[wiek>=18&waga<=90,]
+pacjenci
+```
+
+# Zadanie 9
+
+```{r include=FALSE}
+library(nycflights13)
+
+flight_lm <- lm(arr_delay ~ dep_delay + month + carrier, 
+                data = flights)
+```
+
+### Sprawdzanie ile jest pozycji na liście
+
+```{r}
+length(flight_lm)
+```
+
+### Sprawdzanie jak nazywają się elementy listy
+
+```{r}
+names(flight_lm)
+```
+
+### Sprawdzanie współczynników tego modelu
+
+```{r}
+summary(flight_lm)
+```
+
+# Zadanie 10
+
+### Wyświetlanie danych macierzy VADeaths
+
+```{r}
+VADeaths
+colnames(VADeaths)
+rownames(VADeaths)
+```
+
+Dane przedstawiają współczynnik śmiertelności w rozróżnieniu na grupy wiekowe, płeć oraz miejsce zamieszkania (miasto czy wieś)
+
+### Dzielenie macierzy na dwie podmacierze
+
+```{r warning=FALSE}
+male<-matrix(VADeaths[,c(1,3)],,2)
+#pierwszy argument funkcji matrix to VADeaths[,c(1,3)], co oznacza że moimi wartościami w nowej macierzy male będą kolumny 1,3 z macierzy VADeaths. 
+female<-matrix(VADeaths[,c(2,4)],,2)
+#podobnie jak wyżej, tylko tutaj moimi wartościami nowej macierzy female bedą kolumny 2,4 z macierzy VADeaths.
+```
+
+### Obliaczanie średnich wierszy oraz kolumn
+
+```{r}
+# wiersze
+srednia<-c(mean(male[,1]),mean(male[,2]))
+male1<-rbind(male,srednia)
+srednia2<-c(mean(female[,1]),mean(female[,2]))
+female1<-rbind(female,srednia2)
+#kolumny
+male1<-cbind(male1,rowMeans(male1))
+female1<-cbind(female1,rowMeans(female1))
+male1
+female1 #
+         
+```
+Ostatni wiersz przedstawia średnie kolumn, a 3 kolumna średnie każdego wiersza
+
+# Zadanie 11
+
+### Użycie funkcji <span style="color:red">*if-else*</span> do sprawdzania, czy liczba jest podzielna przez 4
+
+```{r}
+liczba<-5 #dla przykładu biorę liczbę 5
+liczba
+if(liczba%%4==0){
+  print("liczba podzielna przez 4")
+} else{
+  print("liczba niepodzielna przez 4")
+}
+```
+
+# Zadanie 12
+
+```{r}
+ksiazki<-sample(0:4, size = 25, replace = TRUE)
+```
+
+### Obliczanie średniej liczby przeczytanych książek
+
+```{r}
+mean(ksiazki)
+```
+
+### Obliczanie ile osób przeczytało co najmniej 3 książki
+
+```{r}
+sum(ksiazki>=3)
+```
+
+### Obliczanie ile osób nie przeczytało żadnej książki
+
+```{r}
+sum(ksiazki==0)
+```
+
+### Tworzenie zmiennej <span style="color:red">*ksiazki2*</span>, która mówi czy ktoś czyta książki
+
+```{r}
+ksiazki2<-0
+for(x in ksiazki){
+  if(x>=1){
+    ksiazki2<-ksiazki2+1
+  }
+}
+cat("Tyle osób czyta książki: ",ksiazki2)
+```
+
+### Tworzenie instrukcji warunkowej, która podaje liczbę dni w miesiącu
+
+```{r}
+miesiac<-2 # nalezy podac numer miesiaca
+rok<-2016 #dla przykładu wezmę 2016 rok
+
+if(miesiac==1&3&5&7&8&10&12){
+  print("miesiac ma 31 dni")
+}else if(miesiac==2){  #jesli miesiac to luty to nalezy sprawdzic czy rok jest przestępny
+  #rok<-as.numeric(readline("Podaj rok: ")) w kodzie R użyłbym wczytywania zmiennej ale tutaj to nie zadziała :(
+  if(rok%%4==0){
+    print("miesiac ma 29 dni")
+  }else{print("miesiac ma 28 dni")}
+  
+}else{print("miesiac ma 30 dni")}
+```
+
+# Zadanie 13
+
+### Tworzenie funkcji która zamienia stopnie w Celcjuszach na Klewiny i Fahrenheity
+
+```{r}
+zmiana_stopni=function(celcjusza){
+  fahrenheita<-(9/5)*celcjusza+32
+  kelwina<-celcjusza+273.15
+  cat("Temp w Fahrenheitach=",fahrenheita)
+  cat(" ,Temperatura w kelwinach=",kelwina)
+}
+zmiana_stopni(25)
+```
+
+# Zadanie 14
+
+### Tworzenie funkcji, która na podstawie długości boków trójkąta, wyznacza pole
+
+```{r}
+pole_trojkata=function(bok1,bok2,bok3){
+  if((bok1+bok2<bok3)||(bok1+bok3<bok2)||(bok2+bok3<bok1)){
+    print("to nie trojkat")
+    
+  }else{
+  p=(bok1+bok2+bok3)/2
+  pole=(p*(p-bok1)*(p-bok2)*(p-bok3))^(1/2)
+  cat("Pole wynosi: ",pole)
+  return(pole)}
+}
+```
+
+Jeśli podane długości boków trójkąta nie tworzą trójkąta wyświetli się komunikat:
+
+```{r}
+pole1=pole_trojkata(3,4,100)
+```
+
+A jeśli podane boki tworzą trójkąt to wynik zostanie przedstawiony w następujący sposób:
+
+```{r}
+pole1=pole_trojkata(3,4,5)
+```
+
+# Zadanie 15
+
+### Tworzenie funkcji która odpowie jakiego rodzaju jest trójkąt
+
+```{r}
+jaki_trojkat=function(bok1,bok2,bok3){
+  if((bok1+bok2<bok3)||(bok1+bok3<bok2)||(bok2+bok3<bok1)){
+    print("to nie trojkat")
+  }
+  if(bok1^2+bok2^2>bok3^2){
+    print("to trojkat ostrokatny")
+  }
+  else if(bok1^2+bok2^2==bok3^2){
+    print("to trojkat prostokatny")
+  }
+  else{print("to trojkat rozwartokatny")}
+}
+jaki_trojkat(3,4,4) # przyklad
+```
+
+# Zadanie 16
+
+```{r include=FALSE}
+wzrost <- round(rnorm(100, 175, 10),0)
+waga   <- round(wzrost - 105 + rnorm(1,0,5))
+wiek   <- sample(20:60, 100, replace = TRUE)
+dzieci <- rpois(100, lambda = 1)
+osoby  <- data.frame(wzrost = wzrost, waga = waga,
+                     wiek = wiek, dzieci = dzieci)
+```
+
+### Dołączanie zmiennej <span style="color:red">*BMI*</span> oraz <span style="color:red">*plec*</span>
+
+```{r}
+BMI<-sample(25:34,100,replace = T)
+plec<-rep(0:1,1,each=50)
+osoby<-cbind(osoby,BMI)
+osoby<-cbind(osoby,plec)
+```
+
+### Analiza zestawu danych
+
+```{echo = FALSE}
+str(osoby)
+head(osoby)
+tail(osoby)
+dim(osoby)
+summary(osoby)
+```
+
+### Obliczanie ile osób posiada min. dwójkę dzieci
+
+```{r}
+wynik<-sum(osoby$dzieci>=2)
+wynik
+```
+
+### Wykaz osób wyższych niż 185 cm
+
+```{r}
+osoby[osoby$wzrost>=185,]
+```
+
+### Obliczenie średniej wzrostu w powyższej grupie
+
+```{r}
+mean(osoby[osoby$wzrost>=185,1])
+```
+
+### Odpowiedź na pytanie "kto jest przeciętnie wyższy - kobiety czy męższyźni?"
+
+```{r}
+mean(osoby[osoby$plec==0,1]) #kobiety
+mean(osoby[osoby$plec==1,1]) #mężczyźni
+```
+
+
+
+### Osoby z BMI\>30
+
+```{r}
+osoby[osoby$BMI>30,]
+```
+
+### Suma mężczyzn oraz kobiet z BMI\>30
+
+```{r}
+sum(osoby[osoby$BMI>30,6]==0) #Kobiety  
+sum(osoby[osoby$BMI>30,6]==1) #Mężczyźni
+```
+
+
+
+### Dołączanie do zestawu zmiennej wzrost2
+
+```{r}
+wzrost2<-osoby$wzrost
+wzrost2[wzrost2>=185]<-"wysoki"
+wzrost2[wzrost2<185&wzrost2>=165]<-"sredni"
+wzrost2[wzrost2<165]<-"niski"
+osoby<-cbind(osoby,wzrost2)
+head(osoby)
+```
+
+# Zadanie 17
+
+```{r include=FALSE}
+lista <- list(palenie <- c(F,T,T,F,F,T,F),
+              cyfry <- 0:9,
+              macierz <- matrix(sample(1:5,16,replace = T),4,4),
+              tekst <- c("Litwo", "ojczyzno", "moja", "ty",
+                         "jestes", "jak", "zdrowie"))
+```
+
+### Odwoływanie się do obiektu <span style="color:red">*tekst*</span>
+
+```{r}
+lista[4]
+```
+
+### Odwoływanie się do trzeciego elementu wektora <span style="color:red">*cyfry*</span>
+
+```{r}
+# 1 sposób
+cyfry<-c(lista[[2]])
+cyfry[3]
+## 2 sposób
+lista[[2]][3]
+```
+
+### Odwoływanie się do 3 kolumny obiektu <span style="color:red">*macierz*</span>
+
+```{r}
+print(lista[[3]][,3])
+```
+
+# Zad 18
+
+```{r}
+ksiazki<-sample(0:4, size = 25, replace = TRUE)
+```
+
+### Obliczanie średniej liczby przeczytanych książek
+
+```{r}
+mean(ksiazki)
+```
+
+### Obliczanie ile osób przeczytało co najmniej 3 książki
+
+```{r}
+sum(ksiazki>=3)
+```
+
+### Obliczanie ile osób nie przeczytało żadnej książki
+
+```{r}
+sum(ksiazki==0)
+```
+
+### Tworzenie zmiennej <span style="color:red">*ksiazki2*</span>, która mówi czy ktoś czyta książki
+
+```{r}
+ksiazki2<-0
+for(x in ksiazki){
+  if(x>=1){
+    ksiazki2<-ksiazki2+1
+  }
+}
+cat("Tyle osób czyta książki: ",ksiazki2)
+```
+
+# Zadanie 19
+
+### Tworzenie funkcji, która mając datę zwróci liczbę dni w podanym miesiącu
+
+```{r}
+liczba_dni=function(miesiac,rok){
+if(miesiac==1&3&5&7&8&10&12){return(31)}else if(miesiac==2){  
+if(rok%%4==0){return(29)}
+else{return(28)}
+  
+}else{return(30)}
+}
+liczba_dni(3,2020)
+```

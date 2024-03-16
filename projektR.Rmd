@@ -1,0 +1,773 @@
+---
+title: "projektKoncowy"
+author: "Kacper Prorok"
+date: "2023-11-19"
+output: 
+  html_document:
+    css: mystyle.css
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Wprowadzenie
+
+Zbiór danych przedstawia informację o uczniach dwóch szkół średnich, którzy uczęszczali na kursy matematyki. W zbiorze danych znajduje się wiele informacji o otoczeniu ucznia - na przykład: wykształcenie obojga rodziców, czas dojazdu do szkoły, czy uczeń ma dostęp do internetu itp. Dane pochodzą z serwisu *kaggle.com*(https://www.kaggle.com/datasets/uciml/student-alcohol-consumption/data).
+
+
+## Używane pakiety
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(mice)
+library(corrplot)
+library(readr)
+```
+
+## Poznajemy dane
+
+Najpierw wczytamy dane
+```{r message=FALSE, warning=FALSE}
+dane <- read_csv("archive (4).zip")
+```
+
+
+```{r}
+head(dane)
+```
+
+
+```{r}
+dim(dane)
+```
+Dane mają 395 rekordów oraz 33 kolumny. Zobaczmy teraz nazwy atrybutów oraz typy danych:
+```{r}
+names(dane)
+```
+```{r}
+class(dane)
+```
+
+## Zmienne
+
+Przejdźmy teraz do przyjrzenia się kolumnom, których będę używał w dalszej analizie. Sprawdźmy podstawowe statystyki opisowe:
+```{r}
+dane14<-dane%>%
+  select(school,age,sex,Mjob,Fjob,studytime,famsup,paid,activities,famrel,freetime,goout,Dalc,Walc,health,absences,G3)
+summary(dane14)
+```
+Przyjrzymy się teraz dokładniej zmiennym, które podejrzewam że powinny zostać zmienione na typ faktor.
+
+  a) zmienna `school`
+```{r}
+table(dane14$school)
+dane$school<-as.factor(dane$school)
+```
+Zmienna `school` mówi nam do jakiej szkoły chodził uczeń. Widzimy, że szkoła *GP* (Gabriel Pereira) jest dużo bardziej liczna od szkoły *MS*(Mousinho da Silveira). Odrazu zadajmy pytanie: jaka szkoła miała wyższą ocenę końcową `G3`:
+```{r}
+dane14%>%
+  select(G3,school)%>%
+  group_by(school)%>%
+    summarise(średnia=mean(G3),
+            odchylenie=sd(G3),
+            mediana=median(G3),
+            )
+```
+
+
+  b) zmienna `sex`
+```{r}
+table(dane14$sex)
+```
+Mamy tutaj podobne liczności obu płci. 
+
+
+  c) zmienna `Mjob` oraz `Fjob`
+```{r}
+table(dane14$Mjob)
+table(dane14$Fjob)
+```
+Zmienne te zawierają informację o tym gdzie pracuje matka oraz ojciec ucznia. 
+
+
+  d) `studytime` - dokładniej zajmuję się nią w późniejszych rozważaniach.
+  
+  e) `famsup`,`paid` oraz `activities`
+  
+  
+Są to zmienne typu binarnego (*yes* albo *no*). `famsup` mówi nam o tym, czy uczeń otrzymywał wsparcie naukowe od swojej rodziny, `paid` czy uczeń chodził na płatne zajęcia z przedmiotu, a `activities` czy uczęszczał na jakieś dodatkowe aktywności. Sprawdźmy zatem liczności:
+```{r}
+table(dane14$famsup)
+table(dane14$paid)
+table(dane14$activities)
+```
+
+  **Wszystkie zmienne powyżej powinny zostać zmienione na typ factor bez nadania kolejności. Będę robił to w trakcie         późniejszych rozważań.**
+
+  
+  f) `famrel`
+```{r}
+table(dane14$famrel)
+```
+
+  
+Mówi nam o ocenie relacji z rodzicami w skali od 1 do 5. Zmienię typ na factor i nadam rangi poszczególnym klasom:
+```{r}
+dane$famrel<-as.factor(dane$famrel)
+levels(dane$famrel)<-c("1","2","3","4","5")
+```
+
+
+  g) `goout`
+  
+Zawiera informację o częstotliwości wyjścia ze znajomymi. Ponownie skala jest od 1 do 5. Nadaję kolejność:
+```{r}
+dane$goout<-as.factor(dane$goout)
+levels(dane$goout)<-c("1","2","3","4","5")
+```
+  
+  h) `Dalc` oraz `Walc`
+  
+`Dalc` mówi nam o konsumpcji alkoholu w tygodniu, a `Walc` w weekendy. Nadaje kolejności:
+
+```{r}
+dane$Dalc<-as.factor(dane$Dalc)
+levels(dane$Dalc)<-c("1","2","3","4","5")
+
+dane$Walc<-as.factor(dane$Walc)
+levels(dane$Walc)<-c("1","2","3","4","5")
+```
+
+  i) `health`
+  
+Zdrowie ucznia w skali 1-5. Ponownie nadajemy kolejności:
+```{r}
+dane$health<-as.factor(dane$health)
+levels(dane$health)<-c("1","2","3","4","5")
+```
+
+**Warto zapamiętać, że kategoria 1 oznacza bardzo mało, a kategoria 5 - bardzo dużo.** W późniejszym etapie staram się opisać szczegółowiej każdy atrybut.
+
+
+Przejdźmy teraz do zmiennych, które są ilościowe, czyli zmienna `age` oraz `G3`. Zmienną `G3` dokładniej obejrzę potem, narazie zajmijmy się zmienną `age`.
+
+
+```{r}
+summary(dane$age)
+```
+
+Średnio uczniowie z naszych danych mają prawie 17 lat. Najmłodszy uczeń ma lat 15, a najstarszy 22. 
+```{r,fig.align='center'}
+ggplot()+
+  geom_histogram(mapping=aes(x=dane$age),
+                 bins=8,
+                 color="black",
+                 fill="pink")+
+  labs(title ="Rozkład wieku",
+       x="Wiek",
+       y="Liczność grupy")
+  
+  
+```
+
+
+Widzimy, że zdecydowana większość uczniów ma mniej niż 18. Nic dziwnego, skoro badamy szkołę średnią. Można zadać pytanie, co robią tam osoby starsze.W naszych danych znajduje się jeszcze zmienna `failures`, która mówi nam ile razy uczeń powtarzał klasę. Sprawdźmy zatem czy uczniowie powyżej 18 roku życia znajdują się w naszym zestawie z powodu nie zaliczenia klasy.
+```{r}
+table(dane$failures,dane$age)
+cor(dane$failures,dane$age)
+
+```
+
+**Istnieje słaba zależność między wiekiem, a ilością powtarzanych klas.**
+
+Teraz przyjrzymy się jak wygląda atrybut `G3`, który przedstawia końcową ocenę ucznia
+
+```{r}
+summary(dane$G3)
+```
+`G3` jest z przedziału 0-20, a średnia wynosi 10.42. 
+
+```{r,fig.align='center', warning=FALSE}
+dane%>%
+  ggplot()+
+  geom_density(aes(x=G3,fill="pink"))+
+  geom_histogram(aes(x=G3,y=..density..),
+                 binwidth = 1,
+                 fill="blue",
+                 alpha=0.35)+
+  labs(title = "Rozkład gęstości oceny końcowej G3",
+       x="Liczba punktów",
+       y="Gęstość")+
+  theme_light()
+
+```
+
+Większość obserwacji znajduje się przy 10, ale widzimy również spory wzrost obserwacji przy zbliżaniu się do 0.
+
+
+
+# Pytania badawcze
+
+## Czy wykształcenie rodziców  ma wpływ na wynik końcowy
+
+Zaczniemy od wpływu wykształcenia obojga rodziców.
+Przyjrzyjmy się kolumnom `Fedu`(wykształcenie ojca) oraz `Medu`(wykształcenie matki). Zawierają one dane o poziomie wykształcenia rodzica, gdzie:
+
+- 0 = brak wykształcenia
+- 1 = od 1 do 4 klasy szkoły podstawowej
+- 2 = wykształcenie podstawowe
+- 3 = wykształcenie średnie
+- 4 = wykształcenie wyższe 
+
+
+Wyodrębnie teraz z tabelki dane tylko potrzebne nam atrybuty:
+```{r}
+dane1<-dane%>%
+  select(Medu,Fedu,G3,Mjob,Fjob)
+```
+
+Zobaczmy najpierw jak wyglada wykształcenie matek w naszych danych:
+```{r}
+table(dane1$Medu)
+```
+A teraz ojców:
+```{r}
+table(dane1$Fedu)
+```
+
+
+
+Czyli mamy więcej matek z co najmniej średnim wykształceniem. Zobaczmy więc jakie zawody głównie wykonują matki:
+
+```{r,fig.align='center'}
+dane2<-dane1%>%
+  select(Mjob)%>%
+  group_by(Mjob)%>%
+  count()%>%
+  rename("job"=Mjob,"Mjob"=n)
+  
+dane3<-dane1%>%
+  select(Fjob)%>%
+  group_by(Fjob)%>%
+  count()
+  
+dane2<-cbind(dane2,"Fjob"=dane3$n)
+ggplot(dane2, aes(x = factor(job), y =Mjob)) +
+  geom_col(fill="orange",
+           color="black")+
+  labs(title = "Zawody wykonywane przez matki",
+       x="Zawód",
+       y="Liczność")+
+  theme_light()
+
+```
+
+
+A teraz narysujmy wykres dla ojców:
+```{r,fig.align='center'}
+ggplot(dane2, aes(x = factor(job), y =Fjob)) +
+  geom_col(fill="orange",
+           color="black")+
+  labs(title = "Zawody wykonywane przez ojców",
+       x="Zawód",
+       y="Liczność")+
+  theme_light()
+```
+
+
+Zdecydowanie mniej ojców zostaje w domu oraz dużo mniej pracuje w sektorze zdrowia lub jako nauczyciel, co może mieć związek z gorszym wykształceniem posiadanych przez ojców. Sprawdźmy zatem, czy faktycznie wykształcenie ma wpływ na wykonywany przez matki zawód:
+```{r,fig.align='center'}
+ggplot()+
+  geom_bar(aes(x=dane1$Mjob,fill=factor(dane1$Medu)),
+           position = "fill")+
+  theme_light()+
+  labs(title = "Wykształcenie matki a jej praca",
+       x="Praca matki",
+       y="Odsetek liczności",
+       fill="Poziom wykształcenia")
+```
+
+**Matki które pracują jako nauczycielki lub pracują w medycynie w przeważającej części mają wykształcenie wyższe.** Kolejne wnioski, jakie można wysnuć z wykresu to to, że **większość matek, które zostają w domu, ma gorsze wykształcenie.**
+
+Teraz wykres dla ojców:
+```{r,fig.align='center'}
+ggplot()+
+  geom_bar(aes(x=dane1$Fjob,fill=factor(dane1$Fedu)),
+           position = "fill")+
+  theme_light()+
+  labs(title = "Wykształcenie ojca a jego praca",
+       x="Praca ojca",
+       y="Odsetek liczności",
+       fill="Poziom wykształcenia")
+```
+
+
+Przejdźmy do sprawdzenia czy poziom wykształcenia rodziców wpływa na ocenę końcową `G3`. Stworzę zmienną `wyksztalcenie`, która będzie średnim wykształceniem ojca i matki:
+
+```{r}
+dane4<-dane%>%
+  select(G3,Medu,Fedu,famrel)%>%
+  mutate("wyksztalcenie"=(as.numeric(Medu)+as.numeric(Fedu))/2)
+```
+Zanim przedstawimy dane na wykresie sprawdźmy liczności stworzonych przeze mnie grup:
+```{r}
+table(dane4$wyksztalcenie)
+```
+Widzimy, że grupa z wykształceniem "0.5" ma tylko dwie obserwacje, więc wliczę ją do grupy 1.0, aby nie zakłamywała wyników.
+```{r}
+dane4<-dane4%>%
+  mutate(wyksztalcenie=ifelse(wyksztalcenie==0.5,1,wyksztalcenie))
+```
+
+
+Zobaczymy teraz czy istneją jakieś zależności między oceną końcową, a średnim wykształceniem rodziców (aby wykres był czytelny pokażę tylko najgorsze oraz najlepsze wykształcenie)
+```{r,fig.align='center'}
+dane4%>%
+  filter(wyksztalcenie==1|wyksztalcenie==4)%>%
+ggplot()+
+  geom_density(aes(x=G3,fill=factor(wyksztalcenie)),
+               alpha=0.6)+
+  theme_light()+
+  labs(title = "Rozkłady gęstości oceny końcowej zależne od wykształcenia rodziców",
+       x="Ocena końcowa",
+       y="Gęstość",
+       fill="Poziom wykształcenia")
+```
+
+
+**Istneje dosyć wyraźna różnica między oceną końcową, a wykształceniem rodziców.**
+
+Widzimy, że dla wykształcenia =4 ocena `G3` najczęściej występuje w okolicach 12-14, a dla wykształcenia =1 większość wyników skupia się w okolicach 10. Dodatkowo dla słabszego wykształcenia dużo więcej uczniów miało ocenę końcową w okolicah 0 punktów.
+
+## Czy zawód wykonywany przez rodzica ma wpływ na ocenę końcową
+
+Najpierw zobaczmy jak sytuacja wygląda dla zawodu matki:
+```{r,fig.align='center'}
+ggplot(dane)+
+  geom_density(aes(x=G3,fill=dane$Mjob),
+               alpha=0.6)+
+  theme_light()+
+  labs(title = "Statystyki oceny końcowej zależne od zawodu matki",
+       x="Ocena końcowa",
+       fill="Zawód")
+```
+
+**Uczniowie, których matka pracowała w sektorze zdrowotnym uzykiwali lepsze oceny końcowe**
+
+A teraz dla ojca:
+
+```{r,fig.align='center'}
+ggplot(dane)+
+  geom_density(aes(x=G3,fill=dane$Fjob),
+               alpha=0.6)+
+  theme_light()+
+  labs(title = "Statystyki oceny końcowej zależne od zawodu ojca",
+       x="Ocena końcowa",
+       fill="Zawód")
+
+```
+
+**Zdecydowanie najlepiej wypadli uczniowie, których ojciec jest nauczycielem,** a reszta grup uzykała bardzo podobne wyniki końcowe. 
+
+*Należy zwrócić uwagę, że na wyniki napewno wpływa też wykształcenie rodzica, co zbadaliśmy w poprzednim pytaniu.*
+
+
+## Czy separacja rodziców wpływa na spożycie alkoholu przez dziecko oraz na ocenę końcową
+
+
+Sprawdźmy, czy rodzice którzy nie mieszkają z dzieckiem mają wpływ na ilość spożywanego alkoholu przez dziecko. Do zbadania tego przyda nam się atrybut `Pstatus`, który przyjmuje wartość `T` jeśli rodzice mieszkają razem, oraz wartość `A`, jeśli mieszkają osobno. 
+
+Zmienię typ zmiennej na factor oraz sprawdzę liczności dwóch grup:
+
+```{r}
+dane$Pstatus<-as.factor(dane$Pstatus)
+dane5<-dane%>%
+  group_by(Pstatus)%>%
+  count()
+dane5
+```
+
+Jak widzimy liczność próbki `A` jest dużo mniejsza od `T`, ale nadal jest to 40 obserwacji więc wyniki nie powinny być zakłamane. Obliczmy teraz statystyki opisowe:
+```{r}
+dane5<-dane%>%
+  select(Pstatus,Dalc,Walc)%>%
+  mutate("spozycie"=as.numeric(Dalc)+as.numeric(Walc))%>%
+  group_by(Pstatus)%>%
+  summarise(średnia=mean(spozycie),
+            odchylenie=sd(spozycie),
+            mediana=median(spozycie),
+            )
+dane5
+```
+**Nie ma zależności między separacją rodziców, a spożyciem alkoholu przez dziekco.** 
+
+Sprawdźmy jeszcze jaka będzie sytuacja dla oceny końcowej`G3` 
+
+```{r}
+dane5<-dane%>%
+  select(G3,Pstatus)%>%
+  group_by(Pstatus)%>%
+  summarise(średnia=mean(G3),
+            odchylenie=sd(G3),
+            mediana=median(G3),
+            )
+dane5
+```
+
+**Dość niespodziewanie, ale lepiej wypadli tutaj uczniowie których rodzice żyli osobno.** 
+
+## Wyjścia ze znajomymi a spożycie alkoholu
+
+Sprawdźmy jak wyglądają zmienne `Dalc` i `Walc`, które zawierają informacje o spożyciu alkoholu w tygodniu i w weekend.
+
+```{r,fig.align='center'}
+dane19<-dane%>%
+  group_by(Dalc)%>%
+  count()
+
+ggplot(dane19,aes(x="",y=n,fill=Dalc))+
+  geom_col()+
+  geom_text(aes(label = n),
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")+
+  labs(title = "Liczności poszczególnych grup zmiennej Dalc",
+       x="",
+       y="",
+       fill="Spożycie alkoholu w tygodniu")
+```
+
+Zmienna `Dalc` jest zmienną jakościową, która mówi nam o spożyciu alkoholu przez ucznia w tygodniu - 1 to bardzo mało, a 5 to bardzo dużo. Jak widzimy najwięcej studentów znajduje się w grupie '1', czyli tej najmniej spożywającej alkohol. Zobaczmy czy sytuacja ulegnie zmianie w weekend:
+```{r,fig.align='center'}
+dane20<-dane%>%
+  group_by(Walc)%>%
+  count()
+
+ggplot(dane20,aes(x="",y=n,fill=Walc))+
+  geom_col()+
+  geom_text(aes(label = n),
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")+
+  labs(title = "Liczności poszczególnych grup zmiennej Walc",
+       x="",
+       y="",
+       fill="Spożycie alkoholu w weekend")
+```
+Sytuacja ulega mocnej zmianie - **dużo więcej uczniów spożywa alkohol w weekend**. W naszych danych pojawia się jeszcze jedna zmienna - `goout`, która mówi nam o tym, jak często uczeń wychodzi ze znajomymi. Zobaczmy czy między spożyciem alkoholu, a wyjsciami ze znajomymi występuje jakaś zależność. Do sprawdzenia tego stworzę uśrednioną zmienną `spozycie`, która będzie średnią zmiennych `Dalc` i `Walc`.
+```{r}
+dane6<-dane%>%
+  select(Dalc,Walc,absences,goout)%>%
+  mutate("spozycie"=(as.numeric(Dalc)+as.numeric(Walc))/2)
+
+
+table(dane6$spozycie,dane6$goout)
+
+```
+Stwórzmy jeszcze wykres zależności:
+```{r,fig.align='center'}
+dane17<-dane%>%
+  select(Dalc,Walc,goout)%>%
+  mutate(Dalc=as.numeric(Dalc),Walc=as.numeric(Walc),goout=as.numeric(goout))
+cor=cor(dane17[,c("Dalc","Walc","goout")],
+        method="pearson")
+
+corrplot(cor)
+```
+
+
+**Występuje niewielka zależność między spożyciem alkoholu a wyjściami ze znajomymi.** Co cieawe jest ona troszkę silniejsza w weekendy. 
+
+**Umiarkowana zależność występuje między spożywaniem alkoholu w weekend i w tygodniu**, co może świadczyć o tym, że duża część pijących w weekend również będzie piła w tygodniu.
+
+## Spożycie alkoholu a ocena końcowa G3:
+
+Zanim zaczniemy musimy zwrócić uwagę na liczności poszczególnych grup:
+
+```{r}
+table(dane$Dalc)
+```
+
+Dla dużego i bardzo dużego spożycia alkoholu statystki mogą przekłamywać wyniki, dlatego połączmy grupę 4 oraz 5 z grupą 3.
+
+```{r}
+dane8<-dane%>%
+  select(Dalc,G3)%>%
+  mutate(Dalc=ifelse(Dalc==4|Dalc==5|Dalc==3,3,Dalc))
+```
+
+Sporządźmy wykres:
+```{r,fig.align='center'}
+ggplot(data = dane8, 
+       aes(x=G3, fill=factor(Dalc))) + 
+  geom_density(stat="density") +
+  facet_grid(. ~ Dalc)+
+  labs(title = "Rozkłady oceny końcowej zależne od spożycia alkoholu w tygodniu",
+       x="Ocena końcowa",
+       y="Gęstość",
+       fill="Spożycie alkoholu w tygodniu")
+```
+
+Statystyki opisowe:
+```{r}
+dane9<-dane8%>%
+  select(G3,Dalc)%>%
+  group_by(Dalc)%>%
+  summarise(liczba = n(),
+            srednia = mean(G3),
+            mediana = median(G3),
+            odch.st = sd(G3))
+dane9
+```
+
+Zdecydowanie najgorzej poszło grupie `2`, która miała umiarkowane spożycie alkholou, a tylko trochę lepiej od grupy spożywającej dużo alkhololu, poradziła sobie grupa `1`.
+
+**Zależność między spożyciem alkoholu w tygodniu, a oceną końcową jest mała.**
+
+Zobaczmy czy sytuacja zmienia się, gdy weźmiemy spożycie alkholu w weekend.
+
+```{r}
+dane10<-dane%>%
+  select(G3,Walc)%>%
+  group_by(Walc)%>%
+  summarise(liczba = n(),
+            srednia = mean(G3),
+            mediana = median(G3),
+            odch.st = sd(G3))
+dane10
+```
+
+**Tutaj również nie ma silnej zależności między spożyciem alkoholou w weekend, a oceną końcową. **
+
+## Czy ilość spożywanego alkoholu wpływa na zdrowie 
+
+Przyjrzymy się teraz zmiennej `health`, która mówi nam o poziomie zdrowia ucznia (1-najgorszy,5-najlepszy). Sprawdźmy najpierw stan zdrowia naszych uczniów:
+
+```{r,fig.align='center'}
+dane18<-dane%>%
+  group_by(health)%>%
+  count()
+
+ggplot(dane18,aes(x="",y=n,fill=health))+
+  geom_col()+
+  geom_text(aes(label = n),
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")+
+  scale_fill_brewer()+
+  labs(title = "Zdrowie uczniów",
+       x="",
+       y="",
+       fill="Poziom zdrowia")
+```
+*146 uczniów oceniło swój stan zdrowia na najlepszy, a więcej niż połowa uczniów ma co najmniej dobry(`4`) stan zdrowia.*
+
+
+Do moich rozważań podzielę zmienną `health` w następujący sposób: uczniowie którzy ocene zdrowia mają mniejszą lub równą 3 połączę w jedną grupę i nazwę *"zły"*, a resztę połączę w grupę *"dobry"*:
+
+```{r}
+dane11<-dane%>%
+  select(G3,Walc,health)%>%
+  mutate(health=ifelse(health==1|health==2|health==3,"zły","dobry"))
+```
+
+
+Sprawdźmy teraz jak wygląda stan zdrowia:
+
+```{r,fig.align='center'}
+ggplot()+
+  geom_bar(aes(x=dane11$health),
+           color="black",
+           fill="orange")+
+  labs(x="Stan zdrowia",
+       y="Licznośc grupy")+
+  theme_light()
+```
+
+Sprawdźmy czy ilość picia w weekend wpływa na zdrowie:
+
+```{r,fig.align='center'}
+ggplot()+
+  geom_bar(aes(x=dane$Walc,
+               fill=dane11$health),
+           position = "dodge")+
+  theme_light()+
+  labs(title = "Zdrowie uczniów zależne od spożycia alkoholu w weekend",
+       x="Spożycie alkoholu w weekend(1-mało,5-dużo)",
+       y="Liczność",
+       fill="Stan zdrowia")
+```
+
+Największe różnice widzimy w grupach `4` oraz `5`, czyli tam gdzie uczniowie spożywali najwięcej alkholu w weekend. Co ciekawe jest tam sporo uczniów z dobrym stanem zdrowia. 
+
+## Czy zdrowie wpływa na ocenę końcową
+
+
+```{r,fig.align='center'}
+ggplot(dane11)+
+  geom_boxplot(aes(x=G3,
+               y=health))+
+  theme_light()+
+  labs(x="Ocena końcowa",
+       y="Stan zdrowia")
+```
+
+
+Nie ma dużej zależności między zdrowiem, a oceną końcową. Wręcz **można powiedzieć, że uczniowie ze złym stanem zdrowia poradzili sobie troszeczkę lepiej niż uczniowie z dobrym stanem zdrowia.**
+
+Możemy sprawdzić jeszcze, jakby sytuacja wyglądała gdy weźmiemy tylko dwie graniczne grupy - z oceną zdrowia `1` oraz `5`. Sprawdźmy liczności tych grup:
+
+```{r}
+table(dane$health)
+```
+Jako że grupa `5` jest dużo bardziej liczna niż `1` wezmę grupę `4`. 
+```{r}
+dane12<-dane%>%
+  select(G3,health)%>%
+  filter(health==1|health==4)%>%
+  group_by(health)%>%
+  summarise(liczba = n(),
+            srednia = mean(G3),
+            mediana = median(G3),
+            odch.st = sd(G3))
+dane12
+  
+```
+Tutaj już widzimy ewidentą zależność - **uczniowie z bardzo złym stanem zdrowia poradzili sobie znacznie lepiej niż uczniowie z dobrym stanem zdrowia.** 
+
+## Czy ilość nauki wpływa na zdrowie
+
+```{r,fig.align='center'}
+ggplot()+
+  geom_bar(aes(x=dane$studytime,
+               fill=dane11$health))+
+  theme_light()+
+  labs(title = "Ilość nauki, a stan zdrowia",
+       x="Ilość nauki(1-mało,5-dużo)",
+       y="Liczność",
+       fill="Stan zdrowia")
+
+```
+
+Występują niewielkie róznice w licznościach grup - w grupie która uczyła się najmniej mamy trochę więcej osób z dobrym stanem zdrowia, a w grupie która uczyła się najwięcej więcej niż połowa uczniów ma zły stan zdrowia, ale nie widać tutaj ewidentnych zależności, więc możemy powiedzieć że **ilość nauki raczej nie wpływa na zdrowie ucznia.**
+
+
+## Czy ilość nauki wpływa na ocenę końcową
+
+Sprawdźmy czy faktycznie więcej czasu spędzonego nad nauką przynosi rezultaty w postaci wyższej oceny końcowej. 
+
+Przypomnijmy jeszcze raz jakie są liczności poszczególnych grup atrybutu `studytime`:
+```{r}
+dane%>%
+  group_by(studytime)%>%
+  count()
+```
+
+ -'1' to <2 godziny
+ 
+ -'2' to od 2 do 5 godzin
+ 
+ -'3' to od 5 do 10 godzin
+ 
+ -'4' to >10 godzin
+
+
+Jako że grupa uczniów, którzy uczyli się >10 godzin jest nieliczna to połącze ją z grupą '3':
+```{r}
+dane0<-dane%>%
+  select(studytime,G3)%>%
+  mutate(studytime=ifelse(studytime==3|studytime==4,3,studytime))
+```
+
+Sprawdźmy teraz, czy więcej godzin nauki przynosi efekty w postaci wyższej oceny końcowej.
+```{r,fig.align='center'}
+ggplot(dane0,aes(y=factor(studytime),x=G3))+
+  geom_boxplot(color="black",
+               fill="orange")+
+  labs(title = "Statystyki oceny końcowej zależne od ilości nauki",
+       x="Ocena końcowa",
+       y="Ilość nauki")+
+  theme_light()
+  
+  
+```
+
+
+**Tak jak można się było spodziewać, więcej nauki w ciągu tygodnia przynosi efekty w postaci wyższych ocen końcowych.** 
+
+Potwierdźmy to jeszcze statystykami opisowymi:
+
+```{r}
+dane0%>%
+  group_by(studytime)%>%
+  summarise(średnia=mean(G3),
+            odchylenie_standardowe=sd(G3),
+            mediana=median(G3))
+```
+
+
+Sprawdźmy jeszcze, ile osób które uczyły się mniej niż 2 godziny nie zdało(zakładając, że trzeba mieć więcej niż 30%:
+```{r}
+dane0%>%
+  select(studytime,G3)%>%
+  filter(studytime==1)%>%
+  count(G3<6)
+```
+17 uczniów nie zdało semestru.A teraz sprawdźmy jak sytuacja ma się u osób, które uczyły się więcej niż 5 godzin:
+```{r}
+dane0%>%
+  select(studytime,G3)%>%
+  filter(studytime==3)%>%
+  count(G3<6)
+```
+
+
+Tutaj widzimy, że 9 uczniów nie zaliczyło semestru. Oczywiście trzeba wziąć pod uwagę to, że grupa tych uczniów była troszeczkę mniej liczna.
+
+## Czy uczniowie korzystający z pomocy dostawali lepsze oceny
+
+
+Postaram się teraz zbadać, czy uczniowie którzy korzystali z różnych pomocy naukowych oraz dodatkowych zajęć dostawali lepsze oceny. Potrzebne mi będą zmienne:
+
+- `schoolsup` - dodatkowe wsparcie naukowe (tak lub nie )
+
+- `paid` - dodatkowe płatne lekcje (tak lub nie )
+
+- `famsup` - naukowe wsparcie od rodziny (tak lub nie )
+
+Sprawdzę teraz ile uczniów otrzymuje wszystkie trzy pomoce naraz:
+
+```{r}
+(dane%>%
+  select(schoolsup,paid,famsup)%>%
+  filter(schoolsup=="yes"&paid=="yes"&famsup=="yes")%>%
+   count())
+  
+```
+
+Jest to niewielka ilość uczniów, dlatego pozbędę się w naszych dalszych rozważaniach zmiennej `schoolsup`.
+
+```{r}
+dane13<-dane%>%
+  select(famrel,G3,paid,famsup)%>%
+  filter(paid=="yes"&famsup=="yes")
+```
+
+
+```{r}
+summary(dane13$G3)
+```
+Dla przypomnienia - statystyki całej populacji:
+```{r}
+summary(dane$G3)
+```
+
+**Wyniki są do siebie bardzo zbliżone - zależność jest zerowa.**
+
+
